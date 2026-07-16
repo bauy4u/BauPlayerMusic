@@ -47,7 +47,7 @@ def find_clang_format(version):
 	print(f"Found no clang-format {version}")
 	sys.exit(-1)
 
-clang_format_bin = find_clang_format(20)
+clang_format_bin = find_clang_format(10)
 
 def reformat(filenames):
 	for filename in filenames:
@@ -77,12 +77,8 @@ def warn(filenames):
 def main():
 	p = argparse.ArgumentParser(description="Check and fix style of changed files")
 	p.add_argument("-n", "--dry-run", action="store_true", help="Don't fix, only warn")
-	p.add_argument("filenames", nargs="*", help="Files to check instead of all C/C++ source files")
 	args = p.parse_args()
-	filenames = args.filenames or recursive_file_list("src")
-	filenames = filter_ignored(filter_cpp(filenames))
-	if not filenames:
-		return
+	filenames = filter_ignored(filter_cpp(recursive_file_list("src")))
 	if not args.dry_run:
 		reformat(filenames)
 	else:
