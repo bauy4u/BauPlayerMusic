@@ -1,0 +1,7 @@
+Flask>=3.0,<4
+requests>=2.31,<3
+selenium>=4.20,<5
+boto3>=1.34,<2
+pydub>=0.25,<1
+python-dotenv>=1.0,<2
+websocket-client>=1.8,<2

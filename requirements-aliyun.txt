@@ -1,0 +1,2 @@
+-r requirements.txt
+oss2>=2.18,<3
