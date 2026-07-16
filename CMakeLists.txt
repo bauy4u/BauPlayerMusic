@@ -2739,31 +2739,34 @@ if(SERVER)
   list(REMOVE_ITEM ENGINE_SERVER_WITHOUT_MAIN "${PROJECT_SOURCE_DIR}/src/engine/server/main.cpp")
 
   set_src(GAME_SERVER GLOB_RECURSE src/game/server
+    chi_text.cpp
+    connect4.cpp
     ddracechat.cpp
     ddracecommands.cpp
-	chi_text.cpp
-	entities/chi_dot.cpp
-	entities/chi_dot.h
-	entities/chris_sprite.cpp
-	entities/chris_sprite.h
-	entities/gomoku_piece.cpp
-	entities/gomoku_piece.h
-	entities/flight_chess.cpp
-	entities/flight_chess.h
-	entities/flight_chess_indicator.cpp
-	entities/flight_chess_indicator.h
-	entities/flight_chess_color_badge.cpp
-	entities/flight_chess_color_badge.h
-	entities/dice_3d.cpp
-	entities/dice_3d.h
+    dice3d.cpp
+    duel.cpp
     entities/character.cpp
     entities/character.h
+    entities/chi_dot.cpp
+    entities/chi_dot.h
+    entities/chris_sprite.cpp
+    entities/chris_sprite.h
+    entities/dice_3d.cpp
+    entities/dice_3d.h
     entities/door.cpp
     entities/door.h
     entities/dragger.cpp
     entities/dragger.h
     entities/dragger_beam.cpp
     entities/dragger_beam.h
+    entities/flight_chess.cpp
+    entities/flight_chess.h
+    entities/flight_chess_color_badge.cpp
+    entities/flight_chess_color_badge.h
+    entities/flight_chess_indicator.cpp
+    entities/flight_chess_indicator.h
+    entities/gomoku_piece.cpp
+    entities/gomoku_piece.h
     entities/gun.cpp
     entities/gun.h
     entities/laser.cpp
@@ -2776,15 +2779,11 @@ if(SERVER)
     entities/plasma.h
     entities/projectile.cpp
     entities/projectile.h
-	duel.cpp
-	connect4.cpp
-	flightchess.cpp
-	dice3d.cpp
-	gomoku.cpp
     entity.cpp
     entity.h
     eventhandler.cpp
     eventhandler.h
+    flightchess.cpp
     gamecontext.cpp
     gamecontext.h
     gamecontroller.cpp
@@ -2795,6 +2794,7 @@ if(SERVER)
     gamemodes/mod.h
     gameworld.cpp
     gameworld.h
+    gomoku.cpp
     music.cpp
     music.h
     music_backend.cpp
@@ -2813,8 +2813,8 @@ if(SERVER)
     mutes.cpp
     player.cpp
     player.h
-	 rainbowname.cpp
-	 rainbowname.h
+    rainbowname.cpp
+    rainbowname.h
     save.cpp
     save.h
     score.cpp
