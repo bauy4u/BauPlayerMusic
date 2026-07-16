@@ -2925,6 +2925,12 @@ if(SERVER)
 	  "${PROJECT_SOURCE_DIR}/turtle_soup.py"
 	  "$<TARGET_FILE_DIR:game-server>/turtle_soup.py"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      "${PROJECT_SOURCE_DIR}/admin_panel.py"
+      "$<TARGET_FILE_DIR:game-server>/admin_panel.py"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+      "${PROJECT_SOURCE_DIR}/admin_web"
+      "$<TARGET_FILE_DIR:game-server>/admin_web"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
       "${PROJECT_SOURCE_DIR}/requirements.txt"
       "$<TARGET_FILE_DIR:game-server>/requirements.txt"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -2942,6 +2948,12 @@ if(SERVER)
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
       "${PROJECT_SOURCE_DIR}/start_bpmusic_windows.cmd"
       "$<TARGET_FILE_DIR:game-server>/start_bpmusic_windows.cmd"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      "${PROJECT_SOURCE_DIR}/start_admin_panel.ps1"
+      "$<TARGET_FILE_DIR:game-server>/start_admin_panel.ps1"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      "${PROJECT_SOURCE_DIR}/start_admin_panel.cmd"
+      "$<TARGET_FILE_DIR:game-server>/start_admin_panel.cmd"
     COMMAND ${CMAKE_COMMAND} -E make_directory
       "$<TARGET_FILE_DIR:game-server>/data"
 	COMMAND ${CMAKE_COMMAND} -E make_directory

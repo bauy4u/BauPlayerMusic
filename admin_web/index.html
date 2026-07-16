@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>BauPlayerMusic 控制台</title>
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark"><span></span><span></span><span></span></div>
+        <div><strong>BauPlayerMusic</strong><small>SERVER CONSOLE</small></div>
+      </div>
+      <nav id="nav">
+        <button class="nav-item active" data-page="overview"><i>⌂</i><span>总览</span></button>
+        <button class="nav-item" data-page="services"><i>◉</i><span>服务管理</span></button>
+        <button class="nav-item" data-page="qqbot"><i>Q</i><span>QQBot</span></button>
+        <button class="nav-item" data-page="turtle"><i>汤</i><span>海龟汤</span></button>
+        <button class="nav-item" data-page="storage"><i>☁</i><span>对象存储</span></button>
+        <button class="nav-item" data-page="backend"><i>⚙</i><span>后端配置</span></button>
+        <button class="nav-item" data-page="server"><i>▣</i><span>游戏服务端</span></button>
+        <button class="nav-item" data-page="panel"><i>◆</i><span>面板设置</span></button>
+        <button class="nav-item" data-page="logs"><i>⌁</i><span>实时日志</span></button>
+      </nav>
+      <div class="side-footer">
+        <span class="status-dot" id="globalDot"></span>
+        <div><b id="globalState">正在连接</b><small>127.0.0.1 本机控制台</small></div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">LOCAL ADMINISTRATION</p>
+          <h1 id="pageTitle">运行总览</h1>
+        </div>
+        <div class="top-actions">
+          <span class="last-update" id="lastUpdate">尚未刷新</span>
+          <button class="icon-button" id="refreshButton" title="刷新">↻</button>
+          <button class="primary compact" id="saveAllButton">保存配置</button>
+        </div>
+      </header>
+
+      <section class="page active" data-page="overview">
+        <div class="hero-card">
+          <div>
+            <span class="hero-kicker">BAUPLAYER MUSIC NODE</span>
+            <h2>服务器状态，一眼看清。</h2>
+            <p>管理 DDNet、音乐后端、NapCat、海龟汤和地图对象存储。所有密钥只保存在服务器本地。</p>
+          </div>
+          <div class="hero-orbit">
+            <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+            <div class="pulse-core"><span>♫</span></div>
+          </div>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric"><div class="metric-icon violet">◉</div><div><small>DDNet 服务端</small><strong id="metricServer">检查中</strong><span id="metricServerSub">—</span></div></article>
+          <article class="metric"><div class="metric-icon cyan">⌁</div><div><small>音乐后端</small><strong id="metricBackend">检查中</strong><span id="metricBackendSub">—</span></div></article>
+          <article class="metric"><div class="metric-icon green">Q</div><div><small>QQBot</small><strong id="metricQq">检查中</strong><span id="metricQqSub">—</span></div></article>
+          <article class="metric"><div class="metric-icon orange">☁</div><div><small>对象存储</small><strong id="metricStorage">检查中</strong><span id="metricStorageSub">—</span></div></article>
+        </div>
+
+        <div class="split-grid">
+          <article class="panel-card">
+            <div class="card-head"><div><span class="section-tag">SERVICES</span><h3>核心服务</h3></div><span class="mini-note">面板启动的进程才可停止</span></div>
+            <div id="overviewServices" class="service-list"></div>
+          </article>
+          <article class="panel-card">
+            <div class="card-head"><div><span class="section-tag">CHECKLIST</span><h3>部署完整度</h3></div></div>
+            <div id="checklist" class="check-list"></div>
+          </article>
+        </div>
+
+        <div class="split-grid lower">
+          <article class="panel-card">
+            <div class="card-head"><div><span class="section-tag">DATA</span><h3>运行数据</h3></div></div>
+            <div class="usage-grid" id="usageGrid"></div>
+          </article>
+          <article class="panel-card quick-card">
+            <div class="card-head"><div><span class="section-tag">QUICK TEST</span><h3>快速诊断</h3></div></div>
+            <div class="quick-actions">
+              <button data-check="backend"><b>后端健康检查</b><span>请求 /health 接口</span></button>
+              <button data-check="qqbot"><b>测试 NapCat</b><span>WebSocket 端口与桥接状态</span></button>
+              <button data-check="turtle"><b>验证题库</b><span>解析 JSON 并统计题目</span></button>
+              <button data-check="storage"><b>测试对象存储</b><span>验证端点、密钥与桶权限</span></button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page" data-page="services">
+        <div class="page-intro"><div><span class="section-tag">PROCESS CONTROL</span><h2>服务管理</h2><p>面板会把标准输出写入独立日志。为安全起见，不结束面板外启动的进程。</p></div></div>
+        <div id="serviceCards" class="service-card-grid"></div>
+      </section>
+
+      <section class="page config-page" data-page="qqbot"><div class="page-intro"><div><span class="section-tag">NAPCAT / ONEBOT</span><h2>QQBot</h2><p>配置群聊点歌、队列查询和游戏内消息转发。</p></div><button class="test-button" data-check="qqbot">测试连接</button></div><div id="form-qqbot" class="form-card"></div></section>
+      <section class="page config-page" data-page="turtle"><div class="page-intro"><div><span class="section-tag">TURTLE SOUP</span><h2>海龟汤</h2><p>检查题库并配置可选的自由问答模型。</p></div><button class="test-button" data-check="turtle">验证题库</button></div><div id="form-turtle" class="form-card"></div></section>
+      <section class="page config-page" data-page="storage"><div class="page-intro"><div><span class="section-tag">S3 COMPATIBLE STORAGE</span><h2>对象存储</h2><p>内网负责上传，公网域名负责玩家下载，两者不要混填。</p></div><button class="test-button" data-check="storage">测试桶权限</button></div><div id="form-storage" class="form-card"></div></section>
+      <section class="page config-page" data-page="backend"><div class="page-intro"><div><span class="section-tag">MUSIC BACKEND</span><h2>后端配置</h2><p>管理音乐下载、地图缝合和任务并发。</p></div><button class="test-button" data-check="backend">健康检查</button></div><div id="form-backend" class="form-card"></div></section>
+      <section class="page config-page" data-page="server"><div class="page-intro"><div><span class="section-tag">DDNET SERVER</span><h2>游戏服务端</h2><p>修改 myServerconfig.cfg；运行中的服务需重启后应用。</p></div></div><div id="form-server" class="form-card"></div></section>
+      <section class="page config-page" data-page="panel"><div class="page-intro"><div><span class="section-tag">CONTROL PANEL</span><h2>面板设置</h2><p>默认仅本机可访问。除非有反向代理和访问控制，否则不要监听公网地址。</p></div></div><div id="form-panel" class="form-card"></div></section>
+
+      <section class="page" data-page="logs">
+        <div class="page-intro"><div><span class="section-tag">LIVE OUTPUT</span><h2>实时日志</h2><p>查看由面板启动的后端和服务端输出。</p></div><label class="auto-refresh"><input type="checkbox" id="autoLogs" checked><span>自动刷新</span></label></div>
+        <article class="log-card">
+          <div class="log-tabs"><button class="active" data-log="backend">音乐后端</button><button data-log="server">服务端进程</button><button data-log="ddnet">DDNet 日志</button><span></span><button id="refreshLogs">刷新</button></div>
+          <pre id="logOutput">正在读取日志…</pre>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast-stack" id="toastStack"></div>
+  <div class="auth-modal hidden" id="authModal">
+    <div><span class="section-tag">AUTHENTICATION</span><h2>输入面板访问密钥</h2><p>密钥仅保存在当前浏览器标签页。</p><input type="password" id="authToken" autocomplete="current-password" placeholder="BPMUSIC_PANEL_TOKEN"><button class="primary" id="authSubmit">进入控制台</button></div>
+  </div>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

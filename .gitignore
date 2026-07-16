@@ -36,6 +36,7 @@ SAN.*
 _CPack_Packages/
 build.ninja
 checksummed_*
+!/cmake/checksummed_extra.txt
 cmake_install.cmake
 debug
 gmock.pc
@@ -141,6 +142,7 @@ tags
 *.so
 *.spv
 *.sqlite
+*.sqlite3
 *.sqlite-shm
 *.sqlite-wal
 *.suo
@@ -155,6 +157,7 @@ tags
 
 # Windows launcher is source, not a generated command file.
 !start_bpmusic_windows.cmd
+!start_admin_panel.cmd
 
 # Local work/reference trees and release artifacts must never enter the source repository.
 /.agents/
@@ -169,3 +172,4 @@ tags
 /彩色名字参考项目/
 /mod_alert参考项目/
 /pvp参考项目/
+/data/admin_panel/
