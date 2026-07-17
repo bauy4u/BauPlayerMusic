@@ -403,7 +403,6 @@ void CGameControllerDDRace::TeleportPlayerToTeamIn(CCharacter *pChr, int TeamRol
 	str_format(aBuf, sizeof(aBuf), "Map dimensions: %dx%d", MapWidth, MapHeight);
 	GameServer()->Console()->Print(IConsole::OUTPUT_LEVEL_DEBUG, "teleport", aBuf);
 
-	int TilesFound = 0;
 	int SpecialTilesFound = 0;
 
 	for(int y = 0; y < MapHeight; y++)
@@ -427,7 +426,6 @@ void CGameControllerDDRace::TeleportPlayerToTeamIn(CCharacter *pChr, int TeamRol
 
 			if(TileIndex == TargetTile || TileFIndex == TargetTile)
 			{
-				TilesFound++;
 				vec2 TelePos = vec2(x * 32.0f + 16.0f, y * 32.0f + 16.0f);
 
 				str_format(aBuf, sizeof(aBuf), "Found target tile %d at position (%d,%d), teleporting to (%.1f,%.1f)",

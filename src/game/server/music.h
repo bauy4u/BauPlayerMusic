@@ -96,8 +96,8 @@ public:
 
 	CMusicState &operator=(const CMusicState &Other);
 
-	void QueueEvent(SMusicEvent Event) REQUIRES(!m_MusicEventMutex);
-	std::vector<SMusicEvent> DrainEvents() REQUIRES(!m_MusicEventMutex);
+	void QueueEvent(SMusicEvent Event) EXCLUDES(m_MusicEventMutex);
+	std::vector<SMusicEvent> DrainEvents() EXCLUDES(m_MusicEventMutex);
 	void AddQueuedSong(const SongInfo &Song);
 	// QueueIndex is zero-based. The song is inserted immediately after it.
 	// Returns the inserted zero-based index, or -1 when QueueIndex is invalid.

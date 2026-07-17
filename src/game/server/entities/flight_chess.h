@@ -25,7 +25,7 @@ private:
 	bool CanSee(int SnappingClient);
 	int m_Team;
 	int m_Color;
-	int m_Plane;
+	[[maybe_unused]] int m_Plane;
 	vec2 m_MoveStart{};
 	vec2 m_MoveTarget{};
 	int m_MoveStartTick = 0;
