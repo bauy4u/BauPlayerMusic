@@ -1,6 +1,7 @@
 #ifndef GAME_SERVER_MUSIC_H
 #define GAME_SERVER_MUSIC_H
 
+#include <base/lock.h>
 #include <base/system.h>
 #include <engine/shared/http.h>
 #include <engine/shared/jobs.h>
@@ -95,8 +96,8 @@ public:
 
 	CMusicState &operator=(const CMusicState &Other);
 
-	void QueueEvent(SMusicEvent Event);
-	std::vector<SMusicEvent> DrainEvents();
+	void QueueEvent(SMusicEvent Event) REQUIRES(!m_MusicEventMutex);
+	std::vector<SMusicEvent> DrainEvents() REQUIRES(!m_MusicEventMutex);
 	void AddQueuedSong(const SongInfo &Song);
 	// QueueIndex is zero-based. The song is inserted immediately after it.
 	// Returns the inserted zero-based index, or -1 when QueueIndex is invalid.
