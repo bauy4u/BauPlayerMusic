@@ -181,7 +181,6 @@ CLoadResult Load(IStorage *pStorage, const char *pFilePath, CMusicState *pMusic)
 		Result.m_LoadedSongs++;
 	}
 
-	io_close(File);
 	pMusic->ImportQueueSnapshot(std::move(Snapshot));
 	Result.m_Loaded = true;
 	return Result;
