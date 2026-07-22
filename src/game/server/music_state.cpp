@@ -464,11 +464,12 @@ void CMusicState::ResetLyrics()
 	m_LyricsActive = false;
 }
 
-void CMusicState::AddLyricLine(int Tick, const std::string &Text)
+void CMusicState::AddLyricLine(int Tick, const std::string &Text, const std::vector<int> &vCharacterStartOffsets)
 {
 	LyricLine Line;
 	Line.m_Tick = Tick;
 	Line.m_Text = Text;
+	Line.m_vCharacterStartOffsets = vCharacterStartOffsets;
 	m_CurrentLyrics.push_back(Line);
 }
 
@@ -504,7 +505,7 @@ void CMusicState::StopLyricsDisplay()
 	m_LyricsActive = false;
 }
 
-bool CMusicState::PopDueLyric(int ServerTick, std::string *pText)
+bool CMusicState::PopDueLyric(int ServerTick, std::string *pText, int *pDurationTicks, int FallbackDurationTicks, std::vector<int> *pCharacterStartOffsets)
 {
 	if(!m_LyricsActive || m_NextLyricIndex >= m_CurrentLyrics.size())
 		return false;
@@ -513,8 +514,18 @@ bool CMusicState::PopDueLyric(int ServerTick, std::string *pText)
 	if(CurrentTick < m_CurrentLyrics[m_NextLyricIndex].m_Tick)
 		return false;
 
+	const size_t LyricIndex = m_NextLyricIndex;
 	if(pText)
-		*pText = m_CurrentLyrics[m_NextLyricIndex].m_Text;
+		*pText = m_CurrentLyrics[LyricIndex].m_Text;
+	if(pCharacterStartOffsets)
+		*pCharacterStartOffsets = m_CurrentLyrics[LyricIndex].m_vCharacterStartOffsets;
+	if(pDurationTicks)
+	{
+		const int CurrentLyricTick = m_CurrentLyrics[LyricIndex].m_Tick;
+		const int NextLyricTick = LyricIndex + 1 < m_CurrentLyrics.size() ? m_CurrentLyrics[LyricIndex + 1].m_Tick : CurrentLyricTick + FallbackDurationTicks;
+		const int DurationTicks = NextLyricTick - CurrentLyricTick;
+		*pDurationTicks = DurationTicks > 1 ? DurationTicks : 1;
+	}
 	m_NextLyricIndex++;
 	return true;
 }

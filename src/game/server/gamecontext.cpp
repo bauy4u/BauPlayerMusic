@@ -141,6 +141,15 @@ void CGameContext::Construct(int Resetting)
 	m_aDeleteTempfile[0] = 0;
 	m_TeeHistorianActive = false;
 	m_Music.ResetRuntime();
+	m_LyricChid.m_aText[0] = '\0';
+	m_LyricChid.m_NextByte = 0;
+	m_LyricChid.m_NextShowTick = -1;
+	m_LyricChid.m_Pos = vec2(25.0f * 32.0f, 71.0f * 32.0f);
+	m_LyricChid.m_NextXOffset = 0.0f;
+	m_LyricChid.m_CharacterIntervalTicks = Server() ? Server()->TickSpeed() : 50;
+	m_LyricChid.m_StartTick = -1;
+	m_LyricChid.m_LineDurationTicks = 0;
+	m_LyricChid.m_NextCharacterIndex = 0;
 	m_TurtleSoupDummyClientID = -1;
 	std::fill(std::begin(m_aDuelOpponent), std::end(m_aDuelOpponent), -1);
 	mem_zero(m_aDuelWeapons, sizeof(m_aDuelWeapons));
@@ -1204,6 +1213,7 @@ void CGameContext::OnTick()
 	m_World.Tick();
 
 	ProcessMusicEvents();
+	TickLyricChid();
 	TickDuels();
 	TickGomoku();
 	TickConnect4();
@@ -4316,6 +4326,7 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("lyrics_start", "", CFGFLAG_SERVER, ConStartLyrics, this, "Start displaying lyrics");  
 	Console()->Register("lyrics_stop", "", CFGFLAG_SERVER, ConStopLyrics, this, "Stop displaying lyrics");  
 	Console()->Register("lyrics_load", "s[song_id]", CFGFLAG_SERVER, ConLoadLyrics, this, "Load lyrics for song");
+	Console()->Register("lyricpos", "", CFGFLAG_CHAT, ConLyricPos, this, "Set floating lyric position to the admin's character");
 	Console()->Register("queue_status", "", CFGFLAG_SERVER, ConQueueStatus, this, "Show queue status and validate state");  
 	Console()->Register("queue_clear", "", CFGFLAG_SERVER, ConQueueClear, this, "Clear the song queue");  
 	Console()->Register("queue_remove", "i[queue-number]", CFGFLAG_SERVER, ConQueueRemove, this, "Remove a non-playing song by its 1-based queue number");
