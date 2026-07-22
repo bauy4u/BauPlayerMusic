@@ -34,6 +34,8 @@ constexpr int CHID_FLY_TICKS = 26;
 constexpr int CHID_HOLD_TICKS = 180;
 constexpr int CHID_EXIT_TICKS = 70;
 constexpr int CHID_FADE_DELAY_TICKS = 10;
+constexpr int CHID_LYRIC_OWNER = MAX_CLIENTS;
+constexpr float CHID_LYRIC_SIZE_SCALE = 1.0f;
 
 enum
 {
@@ -519,6 +521,135 @@ int CGameContext::CountChiDots(int ClientID)
 			++Count;
 	}
 	return Count;
+}
+
+int CGameContext::SpawnLyricChidCharacter(const char *pCharacterStart, int Bytes, vec2 Pos, float SizeScale, int LifeSpanTicks, float *pAdvance)
+{
+	(void)Bytes;
+	if(pAdvance)
+		*pAdvance = 0.0f;
+	if(!pCharacterStart || Bytes <= 0 || !LoadChiGlyphs())
+		return 0;
+
+	const char *pDecode = pCharacterStart;
+	const int Codepoint = str_utf8_decode(&pDecode);
+	if(Codepoint <= 0)
+		return 0;
+
+	SizeScale = NormalizeChidSizeScale(SizeScale);
+	const float CharSize = CHI_CHAR_SIZE * SizeScale;
+	const float CharSpacing = CHI_CHAR_SPACING * SizeScale;
+
+	auto It = m_ChiGlyphs.find(Codepoint);
+	const float GlyphAdvance = It != m_ChiGlyphs.end() ? It->second.m_Advance : 1.0f;
+	if(pAdvance)
+		*pAdvance = GlyphAdvance * CharSize + CharSpacing * 0.45f;
+	if(It == m_ChiGlyphs.end())
+		return 0;
+
+	const SChiGlyph &Glyph = It->second;
+	if(Glyph.m_vStrokes.empty())
+		return 0;
+
+	const int ExistingChiDots = CountChiDots(-1);
+	const int MaxDotsForChar = minimum(CHI_MAX_DOTS_PER_CHAR, maximum(0, CHI_MAX_DOTS_SERVER - ExistingChiDots));
+	if(MaxDotsForChar <= 0)
+		return 0;
+
+	const int BaseTick = Server()->Tick();
+	const int AppearTick = BaseTick;
+	const int HoldTicks = maximum(1, LifeSpanTicks);
+	const int ExpireTick = BaseTick + HoldTicks;
+	std::vector<vec2> vSamples = BuildBalancedSamples(Glyph.m_vStrokes, MaxDotsForChar);
+	int Spawned = 0;
+	for(const vec2 &Source : vSamples)
+	{
+		if(Spawned >= MaxDotsForChar)
+			break;
+		const vec2 Local = vec2(Source.x / 1024.0f * CharSize, (1.0f - Source.y / 1024.0f) * CharSize);
+		const vec2 Target = Pos + Local;
+		const int Seed = BaseTick * 31 + Codepoint * 997 + Spawned * 17;
+		new CChiDot(&m_World, CHID_LYRIC_OWNER, Target, Target, AppearTick, AppearTick + 1, ExpireTick, Spawned % CHI_DOT_SNAP_INTERVAL, CHI_DOT_SNAP_INTERVAL, CChiDot::EXIT_HOLD, -1, Seed);
+		++Spawned;
+	}
+	return Spawned;
+}
+
+void CGameContext::ClearLyricChid()
+{
+	ClearChiDots(CHID_LYRIC_OWNER);
+	m_LyricChid.m_aText[0] = '\0';
+	m_LyricChid.m_NextByte = 0;
+	m_LyricChid.m_NextShowTick = -1;
+	m_LyricChid.m_NextXOffset = 0.0f;
+	m_LyricChid.m_NextCharacterIndex = 0;
+	m_LyricChid.m_vCharacterStartOffsets.clear();
+}
+
+void CGameContext::StartLyricChid(const char *pText, int LineDurationTicks, const std::vector<int> &vCharacterStartOffsets)
+{
+	ClearLyricChid();
+	if(!pText || !pText[0])
+		return;
+
+	str_copy(m_LyricChid.m_aText, pText, sizeof(m_LyricChid.m_aText));
+	m_LyricChid.m_NextByte = 0;
+	m_LyricChid.m_StartTick = Server()->Tick();
+	m_LyricChid.m_NextShowTick = m_LyricChid.m_StartTick;
+	m_LyricChid.m_NextXOffset = 0.0f;
+	m_LyricChid.m_LineDurationTicks = maximum(1, LineDurationTicks);
+	m_LyricChid.m_NextCharacterIndex = 0;
+
+	int CharacterCount = 0;
+	for(const char *pCharacter = m_LyricChid.m_aText; *pCharacter;)
+	{
+		const char *pNextCharacter = pCharacter;
+		if(str_utf8_decode(&pNextCharacter) <= 0)
+			break;
+		++CharacterCount;
+		pCharacter = pNextCharacter;
+	}
+	m_LyricChid.m_CharacterIntervalTicks = maximum(1, LineDurationTicks / maximum(1, CharacterCount));
+	m_LyricChid.m_vCharacterStartOffsets = vCharacterStartOffsets.size() == (size_t)CharacterCount ? vCharacterStartOffsets : std::vector<int>();
+	if(!m_LyricChid.m_vCharacterStartOffsets.empty())
+		m_LyricChid.m_NextShowTick = m_LyricChid.m_StartTick + maximum(0, m_LyricChid.m_vCharacterStartOffsets.front());
+}
+
+void CGameContext::TickLyricChid()
+{
+	if(m_LyricChid.m_aText[0] == '\0')
+		return;
+
+	const int Now = Server()->Tick();
+	if(Now < m_LyricChid.m_NextShowTick)
+		return;
+
+	const char *pCharacterStart = m_LyricChid.m_aText + m_LyricChid.m_NextByte;
+	if(!*pCharacterStart)
+	{
+		m_LyricChid.m_aText[0] = '\0';
+		return;
+	}
+
+	const char *pCharacterEnd = pCharacterStart;
+	if(str_utf8_decode(&pCharacterEnd) <= 0)
+	{
+		m_LyricChid.m_aText[0] = '\0';
+		return;
+	}
+
+	const int Bytes = (int)(pCharacterEnd - pCharacterStart);
+	float Advance = CHI_CHAR_SIZE * CHID_LYRIC_SIZE_SCALE;
+	const int CharacterIndex = m_LyricChid.m_NextCharacterIndex;
+	const int CurrentOffset = !m_LyricChid.m_vCharacterStartOffsets.empty() ? m_LyricChid.m_vCharacterStartOffsets[CharacterIndex] : CharacterIndex * m_LyricChid.m_CharacterIntervalTicks;
+	const int NextOffset = !m_LyricChid.m_vCharacterStartOffsets.empty() && CharacterIndex + 1 < (int)m_LyricChid.m_vCharacterStartOffsets.size() ? m_LyricChid.m_vCharacterStartOffsets[CharacterIndex + 1] : m_LyricChid.m_LineDurationTicks;
+	const int CharacterInterval = maximum(1, NextOffset - CurrentOffset);
+	SpawnLyricChidCharacter(pCharacterStart, Bytes, m_LyricChid.m_Pos + vec2(m_LyricChid.m_NextXOffset, 0.0f), CHID_LYRIC_SIZE_SCALE, CharacterInterval, &Advance);
+
+	m_LyricChid.m_NextByte += Bytes;
+	m_LyricChid.m_NextXOffset += Advance;
+	m_LyricChid.m_NextCharacterIndex++;
+	m_LyricChid.m_NextShowTick = m_LyricChid.m_StartTick + NextOffset;
 }
 
 #if 0 // Chris sprite feature removed; /chid remains below.

@@ -171,6 +171,7 @@ class CGameContext : public IGameServer
 	static void ConStartLyrics(IConsole::IResult *pResult, void *pUserData);  
 	static void ConStopLyrics(IConsole::IResult *pResult, void *pUserData);  
 	static void ConLoadLyrics(IConsole::IResult *pResult, void *pUserData);
+	static void ConLyricPos(IConsole::IResult *pResult, void *pUserData);
 	static void ConMapbug(IConsole::IResult *pResult, void *pUserData);
 	static void ConSwitchOpen(IConsole::IResult *pResult, void *pUserData);
 	static void ConPause(IConsole::IResult *pResult, void *pUserData);
@@ -569,6 +570,24 @@ private:
 	int CountChiDots(int ClientID = -1);
 	void ClearChiDots(int ClientID);
 	int SpawnChiDynamicText(int ClientID, const char *pText, float SizeScale, int *pUsedChars, int *pMissingChars);
+	int SpawnLyricChidCharacter(const char *pCharacterStart, int Bytes, vec2 Pos, float SizeScale, int LifeSpanTicks, float *pAdvance);
+	struct SLyricChid
+	{
+		char m_aText[256];
+		int m_NextByte;
+		int m_NextShowTick;
+		vec2 m_Pos;
+		float m_NextXOffset;
+		int m_CharacterIntervalTicks;
+		int m_StartTick;
+		int m_LineDurationTicks;
+		int m_NextCharacterIndex;
+		std::vector<int> m_vCharacterStartOffsets;
+	};
+	SLyricChid m_LyricChid;
+	void ClearLyricChid();
+	void StartLyricChid(const char *pText, int LineDurationTicks, const std::vector<int> &vCharacterStartOffsets = {});
+	void TickLyricChid();
 	void AddToPlaylist(const SongInfo &Song);  // 添加歌曲到队列  
 	void ShowPlaylist(int ClientID);           // 显示播放队列
 

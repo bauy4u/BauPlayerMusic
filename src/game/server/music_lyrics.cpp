@@ -1,5 +1,6 @@
 /* Music lyrics loading and playback. */
 #include "gamecontext.h"
+#include "entities/character.h"
 #include "music_config.h"
 
 #include <engine/shared/linereader.h>
@@ -43,16 +44,105 @@ bool ParseLrcTimestamp(const char *pBegin, const char *pEnd, int TickSpeed, int 
     return true;
 }
 
+bool ParseYrcTimestamp(const char *pBegin, const char *pEnd, int TickSpeed, int *pTick)
+{
+    int StartMilliseconds = 0;
+    int DurationMilliseconds = 0;
+    if(sscanf(pBegin, "[%d,%d", &StartMilliseconds, &DurationMilliseconds) != 2 || StartMilliseconds < 0 || DurationMilliseconds < 0)
+        return false;
+
+    *pTick = (int)((int64_t)StartMilliseconds * TickSpeed / 1000);
+    return true;
+}
+
+bool IsYrcWordTimestamp(const char *pBegin, const char *pEnd)
+{
+    int StartMilliseconds = 0;
+    int DurationMilliseconds = 0;
+    int Reserved = 0;
+    return sscanf(pBegin, "(%d,%d,%d", &StartMilliseconds, &DurationMilliseconds, &Reserved) == 3 && pEnd && *pEnd == ')';
+}
+
+std::string StripYrcWordTimestamps(const char *pText)
+{
+    std::string Text;
+    for(const char *pCursor = pText; *pCursor;)
+    {
+        if(*pCursor == '(')
+        {
+            const char *pClosingParenthesis = str_find(pCursor, ")");
+            if(IsYrcWordTimestamp(pCursor, pClosingParenthesis))
+            {
+                pCursor = pClosingParenthesis + 1;
+                continue;
+            }
+        }
+        Text.push_back(*pCursor++);
+    }
+    return Text;
+}
+
+std::vector<int> ExtractYrcCharacterStartOffsets(const char *pText, int LineStartTick, int TickSpeed)
+{
+    std::vector<int> vOffsets;
+    for(const char *pCursor = pText; *pCursor;)
+    {
+        if(*pCursor != '(')
+        {
+            ++pCursor;
+            continue;
+        }
+
+        const char *pClosingParenthesis = str_find(pCursor, ")");
+        int StartMilliseconds = 0;
+        int DurationMilliseconds = 0;
+        int Reserved = 0;
+        if(!pClosingParenthesis || sscanf(pCursor, "(%d,%d,%d", &StartMilliseconds, &DurationMilliseconds, &Reserved) != 3)
+        {
+            ++pCursor;
+            continue;
+        }
+
+        const char *pWordStart = pClosingParenthesis + 1;
+        const char *pWordEnd = str_find(pWordStart, "(");
+        if(!pWordEnd)
+            pWordEnd = pWordStart + str_length(pWordStart);
+
+        int CharacterCount = 0;
+        for(const char *pCharacter = pWordStart; pCharacter < pWordEnd;)
+        {
+            const char *pNextCharacter = pCharacter;
+            if(str_utf8_decode(&pNextCharacter) <= 0 || pNextCharacter > pWordEnd)
+                break;
+            ++CharacterCount;
+            pCharacter = pNextCharacter;
+        }
+        for(int CharacterIndex = 0; CharacterIndex < CharacterCount; ++CharacterIndex)
+        {
+            const int CharacterTick = (int)(((int64_t)StartMilliseconds * TickSpeed + (int64_t)DurationMilliseconds * TickSpeed * CharacterIndex / CharacterCount) / 1000);
+            vOffsets.push_back(maximum(0, CharacterTick - LineStartTick));
+        }
+
+        pCursor = pWordEnd;
+    }
+    return vOffsets;
+}
+
 }
 
 void CGameContext::LoadLyrics(const std::string& songId)    
 {    
     m_Music.ResetLyrics();
         
+    char aYrcPath[IO_MAX_PATH_LENGTH];
     char aLrcPath[IO_MAX_PATH_LENGTH];    
+    str_format(aYrcPath, sizeof(aYrcPath), MusicConfig::YRC_FILE, songId.c_str());
     str_format(aLrcPath, sizeof(aLrcPath), MusicConfig::LYRICS_FILE, songId.c_str());    
         
-    IOHANDLE File = Storage()->OpenFile(aLrcPath, IOFLAG_READ, IStorage::TYPE_ALL);  
+    IOHANDLE File = Storage()->OpenFile(aYrcPath, IOFLAG_READ, IStorage::TYPE_ALL);
+    const bool IsYrc = File != nullptr;
+    if(!File)
+        File = Storage()->OpenFile(aLrcPath, IOFLAG_READ, IStorage::TYPE_ALL);
     if(!File)  
     {  
         return; // 静默失败，很多歌可能没有歌词文件  
@@ -75,21 +165,25 @@ void CGameContext::LoadLyrics(const std::string& songId)
                 break;
 
             int Tick = 0;
-            if(!ParseLrcTimestamp(pCursor, pClosingBracket, Server()->TickSpeed(), &Tick))
+            if(!(IsYrc ? ParseYrcTimestamp(pCursor, pClosingBracket, Server()->TickSpeed(), &Tick) : ParseLrcTimestamp(pCursor, pClosingBracket, Server()->TickSpeed(), &Tick)))
                 break;
 
             vTicks.push_back(Tick);
             pCursor = pClosingBracket + 1;
+            if(IsYrc)
+                break;
         }
 
         while(*pCursor == ' ')
             pCursor++;
 
-        if(!vTicks.empty() && pCursor[0] != '\0')
+        const std::string Text = IsYrc ? StripYrcWordTimestamps(pCursor) : std::string(pCursor);
+        const std::vector<int> vCharacterStartOffsets = IsYrc && !vTicks.empty() ? ExtractYrcCharacterStartOffsets(pCursor, vTicks.front(), Server()->TickSpeed()) : std::vector<int>();
+        if(!vTicks.empty() && !Text.empty())
         {
             for(const int Tick : vTicks)
             {
-                m_Music.AddLyricLine(Tick, std::string(pCursor));
+                m_Music.AddLyricLine(Tick, Text, vCharacterStartOffsets);
                 ParsedCount++;
             }
         }
@@ -190,11 +284,14 @@ void CGameContext::LoadLyricsState()
 void CGameContext::CheckAndSendLyrics()  
 {  
     std::string Text;
-    while(m_Music.PopDueLyric(Server()->Tick(), &Text))
+    std::vector<int> vCharacterStartOffsets;
+    int DurationTicks = Server()->TickSpeed() * 4;
+    while(m_Music.PopDueLyric(Server()->Tick(), &Text, &DurationTicks, Server()->TickSpeed() * 4, &vCharacterStartOffsets))
     {
         SendBroadcast(Text.c_str(), -1, true);
+        StartLyricChid(Text.c_str(), DurationTicks, vCharacterStartOffsets);
     }
-}  
+}
   
 void CGameContext::StartLyrics(bool Announce)
 {    
@@ -208,6 +305,7 @@ void CGameContext::StartLyrics(bool Announce)
 void CGameContext::StopLyrics()  
 {  
     m_Music.StopLyricsDisplay();
+    ClearLyricChid();
     SendChatTarget(-1, "歌词显示已停止");  
 }
 
@@ -230,5 +328,27 @@ void CGameContext::ConLoadLyrics(IConsole::IResult *pResult, void *pUserData)
     {  
         pSelf->LoadLyrics(pResult->GetString(0));  
     }  
+}
+
+void CGameContext::ConLyricPos(IConsole::IResult *pResult, void *pUserData)
+{
+    CGameContext *pSelf = static_cast<CGameContext *>(pUserData);
+    const int ClientId = pResult->m_ClientId;
+    if(ClientId < 0 || ClientId >= MAX_CLIENTS || pSelf->Server()->GetAuthedState(ClientId) != AUTHED_ADMIN)
+    {
+        if(ClientId >= 0)
+            pSelf->SendChatTarget(ClientId, "lyricpos requires administrator access.");
+        return;
+    }
+
+    CCharacter *pCharacter = pSelf->GetPlayerChar(ClientId);
+    if(!pCharacter)
+    {
+        pSelf->SendChatTarget(ClientId, "Spawn before setting the lyric position.");
+        return;
+    }
+
+    pSelf->m_LyricChid.m_Pos = pCharacter->m_Pos;
+    pSelf->SendChatTarget(ClientId, "Floating lyric position updated.");
 }
 

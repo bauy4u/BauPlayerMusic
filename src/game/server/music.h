@@ -35,6 +35,7 @@ struct LyricLine
 {
 	int m_Tick = 0;
 	std::string m_Text;
+	std::vector<int> m_vCharacterStartOffsets;
 };
 
 enum class EMusicEventType
@@ -149,12 +150,12 @@ public:
 	bool NeedsDeferredStartTime() const;
 	void ApplyDeferredStartTime(int64_t StartTime);
 	void ResetLyrics();
-	void AddLyricLine(int Tick, const std::string &Text);
+	void AddLyricLine(int Tick, const std::string &Text, const std::vector<int> &vCharacterStartOffsets = {});
 	bool HasLyrics() const;
 	bool LyricsActive() const;
 	bool BeginLyricsDisplay(int ServerTick, int TickSpeed, int64_t Now);
 	void StopLyricsDisplay();
-	bool PopDueLyric(int ServerTick, std::string *pText);
+	bool PopDueLyric(int ServerTick, std::string *pText, int *pDurationTicks = nullptr, int FallbackDurationTicks = 200, std::vector<int> *pCharacterStartOffsets = nullptr);
 	bool CurrentLyricLine(int ServerTick, std::string *pText) const;
 	const std::string &CurrentSongId() const;
 	int NextLyricIndex() const;

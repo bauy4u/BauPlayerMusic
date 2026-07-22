@@ -8,6 +8,7 @@ inline constexpr const char *DOWNLOAD_ENDPOINT = "http://127.0.0.1:5000/download
 inline constexpr const char *UPLOAD_ENDPOINT = "http://127.0.0.1:5000/upload_map";
 
 inline constexpr const char *AUDIO_FILE = "data/musicso/%s.opus";
+inline constexpr const char *YRC_FILE = "data/musicso/%s.yrc";
 inline constexpr const char *LYRICS_FILE = "data/musicso/%s.lrc";
 inline constexpr const char *ORIGIN_MAP_FILE = "data/originmaps/%s.map";
 inline constexpr const char *TARGET_MAP_FILE = "maps/%s.map";

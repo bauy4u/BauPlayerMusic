@@ -79,7 +79,7 @@ class AppConfig:
 
     @classmethod
     def from_env(cls):
-        base_url = _env("BPMUSIC_NETEASE_BASE_URL", "http://music.163.com").rstrip("/")
+        base_url = _env("BPMUSIC_NETEASE_BASE_URL", "https://music.163.com").rstrip("/")
         return cls(
             netease_base_url=base_url,
             download_dir=Path(_env("BPMUSIC_DOWNLOAD_DIR", "data/musicso")),
@@ -120,7 +120,7 @@ class AppConfig:
 
     @property
     def lyric_api(self):
-        return f"{self.netease_base_url}/api/song/lyric"
+        return "https://music.163.com/api/song/lyric"
 
     def s3_ready(self):
         return all([
@@ -134,6 +134,10 @@ class AppConfig:
 
 CONFIG = AppConfig.from_env()
 HTTP = requests.Session()
+HTTP.headers.update({
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/138.0 Safari/537.36",
+    "Referer": "https://music.163.com/",
+})
 DOWNLOAD_LOCKS = {}
 DOWNLOAD_LOCKS_GUARD = threading.Lock()
 MAP_PATCH_LOCK = threading.Lock()
@@ -836,17 +840,30 @@ def describe_song_url_failure(song_url_data):
 
 
 def _download_and_save_lyrics(song_id, title):
+    yrc_path = CONFIG.download_dir / f"{song_id}.yrc"
     lrc_path = CONFIG.download_dir / f"{song_id}.lrc"
-    if lrc_path.exists():
-        print(f"[跳过] 歌词文件 {lrc_path.name} 已存在。")
+    if yrc_path.exists():
+        print(f"[跳过] 歌词文件 {yrc_path.name} 已存在。")
         return
-    params = {'id': song_id, 'lv': -1, 'tv': -1}
+    params = {'os': 'pc', 'id': song_id, 'yv': -1}
     try:
         response = HTTP.get(CONFIG.lyric_api, params=params, timeout=REQUEST_TIMEOUT)
         response.raise_for_status()
         data = response.json()
-        if data.get('lrc') and data['lrc'].get('lyric'):
-            lyrics = data['lrc']['lyric']
+        yrc_data = data.get('yrc')
+        yrc_lyrics = yrc_data.get('lyric') if isinstance(yrc_data, dict) else ''
+        if yrc_lyrics:
+            with yrc_path.open("w", encoding="utf-8") as f:
+                f.write(yrc_lyrics)
+            print(f"[lyrics] Saved word-timed lyrics to {yrc_path.name}")
+            return
+
+        lrc_response = HTTP.get(CONFIG.lyric_api, params={'os': 'pc', 'id': song_id, 'lv': -1}, timeout=REQUEST_TIMEOUT)
+        lrc_response.raise_for_status()
+        lrc_data = lrc_response.json().get('lrc')
+        lrc_lyrics = lrc_data.get('lyric') if isinstance(lrc_data, dict) else ''
+        if lrc_lyrics:
+            lyrics = lrc_lyrics
             with lrc_path.open("w", encoding="utf-8") as f:
                 f.write(lyrics)
             print(f"[歌词] 已成功保存歌词到 {lrc_path.name}")
@@ -870,7 +887,7 @@ def login_and_get_cookies():
     print("[登录] 请在网页上完成登录后，回到此命令行窗口并按 Enter 键继续。")
     driver = None
     try:
-        driver = webdriver.Chrome()
+        driver = webdriver.Edge()
         driver.get("https://music.163.com/#/login")
         input("[登录] 在您成功登录后，请按 Enter 键...")
         cookies = {cookie['name']: cookie['value'] for cookie in driver.get_cookies()}
